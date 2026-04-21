@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can read/write their own profile
+    match /users/{userId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        // Admin can read their children's profiles
+        resource.data.adminId == request.auth.uid
+      );
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Admin data: only the admin can write, children of that admin can read
+    match /adminData/{adminId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == adminId ||
+        // Children can read their admin's config
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminId == adminId
+      );
+      allow write: if request.auth != null && request.auth.uid == adminId;
+    }
+
+    // Child state: admin and the child themselves can read/write
+    match /childState/{stateId} {
+      allow read, write: if request.auth != null && (
+        // stateId format: adminId_childId
+        stateId.matches(request.auth.uid + '_.*') ||
+        stateId.matches('.*_' + request.auth.uid)
+      );
+    }
+
+    // Invites: admin can create/read, anyone can read (for registration)
+    match /invites/{token} {
+      allow read: if true; // needed for registration link
+      allow create: if request.auth != null;
+      allow update: if request.auth != null; // mark as used
+    }
+  }
+}
