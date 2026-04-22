@@ -89,3 +89,8 @@ export async function createGuestLink(adminId) {
   })
   return token
 }
+// Funcția lipsă pentru GuestView
+export async function getAdminData(adminId) {
+  const snap = await getDoc(doc(db, 'users', adminId))
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null
+}
