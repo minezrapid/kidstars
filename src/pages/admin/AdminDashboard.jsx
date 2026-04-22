@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAdminData, getChildren, getChildState } from '../../lib/firestore'
+import { getChildren, getChildState, getChildConfig } from '../../lib/firestore'
 import { AdminLayout } from './AdminLayout'
 import { Spinner } from '../../components/Spinner'
 
@@ -14,10 +14,9 @@ export function AdminDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [data, kids] = await Promise.all([
-        getAdminData(user.uid),
-        getChildren(user.uid),
-      ])
+      const kids = await getChildren(user.uid)
+      // Get config from first child for stats display
+      const data = kids.length > 0 ? await getChildConfig(user.uid, kids[0].id) : null
       setAdminData(data)
       setChildren(kids)
       const states = {}

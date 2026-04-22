@@ -49,7 +49,14 @@ export function RegisterChildPage() {
         childName: invite.childName,
         ageGroup: invite.ageGroup,
         adminId: invite.adminId,
+        childId: invite.childId || null,
+        gender: invite.gender || 'girl',
       })
+      // Link userId to child doc
+      if (invite.childId) {
+        const { updateChildDoc } = await import('../../lib/firestore')
+        // We'll update this after we know the uid - handled in AuthContext
+      }
       await markInviteUsed(token)
       navigate('/child')
     } catch (err) {

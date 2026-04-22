@@ -45,15 +45,17 @@ export function AuthProvider({ children }) {
     return cred.user
   }
 
-  async function registerChild(email, password, { displayName, childName, ageGroup, adminId }) {
+  async function registerChild(email, password, { displayName, childName, ageGroup, adminId, childId, gender }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
     await createUserDoc(cred.user.uid, {
       role: 'child',
       email,
-      displayName,
+      displayName: displayName || childName,
       childName,
       ageGroup,
       adminId,
+      childId: childId || null,
+      gender: gender || 'girl',
       setupComplete: true,
     })
     const prof = await getUserDoc(cred.user.uid)

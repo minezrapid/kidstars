@@ -5,7 +5,6 @@ import { ToastProvider } from './components/Toast'
 
 // Auth pages
 import { LoginPage }          from './pages/auth/LoginPage'
-import { RegisterAdminPage }  from './pages/auth/RegisterAdminPage'
 import { RegisterChildPage }  from './pages/auth/RegisterChildPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
 
@@ -70,7 +69,6 @@ export default function App() {
 
         {/* Auth */}
         <Route path="/login"           element={<LoginPage />} />
-        <Route path="/register"        element={<RegisterAdminPage />} />
         <Route path="/register/child"  element={<RegisterChildPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 

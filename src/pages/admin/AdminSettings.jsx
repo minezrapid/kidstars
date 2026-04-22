@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAdminData, saveAdminData } from '../../lib/firestore'
+import { getChildConfig, saveChildConfig, getChildren } from '../../lib/firestore'
 import { AdminLayout } from './AdminLayout'
 import { Spinner } from '../../components/Spinner'
 import { useToast } from '../../components/Toast'
@@ -13,14 +13,26 @@ export function AdminSettings() {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('tasks1')
 
+  const [children, setChildren] = useState([])
+  const [selectedChild, setSelectedChild] = useState(null)
+
   useEffect(() => {
-    getAdminData(user.uid).then(d => { setConfig(d); setLoading(false) })
+    getChildren(user.uid).then(async kids => {
+      setChildren(kids)
+      if (kids.length > 0) {
+        const first = kids[0]
+        setSelectedChild(first.id)
+        const d = await getChildConfig(user.uid, first.id)
+        setConfig(d)
+      }
+      setLoading(false)
+    })
   }, [user.uid])
 
   async function handleSave() {
     setSaving(true)
     try {
-      await saveAdminData(user.uid, config)
+      await saveChildConfig(user.uid, selectedChild, config)
       toast('Salvat cu succes! ✅', 'success')
     } catch {
       toast('Eroare la salvare.', 'error')
@@ -73,6 +85,16 @@ export function AdminSettings() {
   return (
     <AdminLayout>
       <div className="fade-in">
+        {children.length > 1 && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {children.map(kid => (
+              <button key={kid.id} onClick={async () => { setSelectedChild(kid.id); const d = await getChildConfig(user.uid, kid.id); setConfig(d) }}
+                style={{ padding: '6px 14px', borderRadius: 'var(--radius-full)', border: `1.5px solid ${selectedChild===kid.id?'var(--purple-600)':'var(--gray-200)'}`, background: selectedChild===kid.id?'var(--purple-600)':'var(--white)', color: selectedChild===kid.id?'white':'var(--gray-600)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                {kid.gender==='girl'?'👧':'👦'} {kid.childName}
+              </button>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
           <div>
             <h1 style={{ fontSize: '1.75rem', color: 'var(--purple-800)' }}>Setări</h1>
