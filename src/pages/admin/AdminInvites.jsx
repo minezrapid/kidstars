@@ -49,15 +49,23 @@ export function AdminInvites() {
 
       // Send email via our serverless function (no CORS issues)
       if (form.email) {
-        const res = await fetch('/api/send-invite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: form.email, childName: form.childName, link }),
-        })
-        if (!res.ok) toast('Email-ul nu a putut fi trimis, dar link-ul a fost creat.', 'error')
-        else toast('Invitație trimisă pe email! 📧', 'success')
+        try {
+          const res = await fetch('/api/send-invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: form.email, childName: form.childName, link }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (data.warning) {
+            toast('Link creat! Email-ul nu s-a trimis — copiază link-ul manual.', 'success')
+          } else {
+            toast('Invitație trimisă pe email! 📧', 'success')
+          }
+        } catch {
+          toast('Link creat! Email-ul nu s-a trimis — copiază link-ul manual.', 'success')
+        }
       } else {
-        toast('Link creat! Copiază-l și trimite-l manual.', 'success')
+        toast('Link creat! Copiază-l și trimite-l copilului.', 'success')
       }
       await load()
       setForm({ childId: '', childName: '', email: '', ageGroup: '7-10', gender: 'girl' })
@@ -124,7 +132,7 @@ export function AdminInvites() {
               <div className="input-group">
                 <label className="input-label">Gen</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[['girl','👧 Fetița'],['boy','👦 Băiețelul']].map(([v,l]) => (
+                  {[['girl','👧 Fată'],['boy','👦 Băiat']].map(([v,l]) => (
                     <button key={v} type="button" onClick={() => setForm(f=>({...f,gender:v}))} style={{
                       flex: 1, padding: '8px', borderRadius: 'var(--radius-md)',
                       border: `1.5px solid ${form.gender===v ? 'var(--purple-600)' : 'var(--gray-200)'}`,

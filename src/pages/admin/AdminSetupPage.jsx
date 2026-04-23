@@ -95,7 +95,7 @@ export function AdminSetupPage() {
       <div className="input-group" style={{ marginBottom: '1.5rem' }}>
         <label className="input-label">Gen</label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
-          {[['girl','👧','Fetița'],['boy','👦','Băiețelul']].map(([val, emoji, label]) => (
+          {[['girl','👧','Fată'],['boy','👦','Băiat']].map(([val, emoji, label]) => (
             <button key={val} onClick={() => setGender(val)} style={{
               padding: '1rem', borderRadius: 'var(--radius-md)', cursor: 'pointer', textAlign: 'center',
               border: `2px solid ${gender === val ? 'var(--purple-600)' : 'var(--gray-200)'}`,

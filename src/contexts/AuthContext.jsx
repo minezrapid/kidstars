@@ -54,13 +54,14 @@ export function AuthProvider({ children }) {
       childName,
       ageGroup,
       adminId,
-      childId: childId || null,
+      childId: childId || cred.user.uid, // use provided childId or fallback to uid
       gender: gender || 'girl',
       setupComplete: true,
     })
     const prof = await getUserDoc(cred.user.uid)
     setProfile(prof)
-    return cred.user
+    // Return object with uid so RegisterChildPage can link the childDoc
+    return { uid: cred.user.uid }
   }
 
   async function login(email, password) {

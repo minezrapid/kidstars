@@ -82,7 +82,7 @@ export function AdminDashboard() {
                       background: 'var(--purple-50)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 22, flexShrink: 0,
                     }}>
-                      {kid.ageGroup === '3-6' ? '🧸' : kid.ageGroup === '7-10' ? '🚀' : kid.ageGroup === '11-14' ? '🎯' : '🏆'}
+                      {kid.gender === 'girl' ? '👧' : '👦'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem' }}>{kid.childName}</div>
