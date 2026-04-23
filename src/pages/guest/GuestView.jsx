@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getInvite, getAdminData, getChildren, getChildState } from '../../lib/firestore'
+import { getInvite, getChildren, getChildState, getChildConfig } from '../../lib/firestore'
 import { StarLogo } from '../../components/StarLogo'
 import { Spinner } from '../../components/Spinner'
 
@@ -23,9 +23,11 @@ export function GuestView() {
         return
       }
       const adminId = invite.adminId
-      const [data, kids] = await Promise.all([getAdminData(adminId), getChildren(adminId)])
-      setAdminData(data)
+      const kids = await getChildren(adminId)
       setChildren(kids)
+      // Load config from first child (guest view shows all children under same config)
+      const data = kids.length > 0 ? await getChildConfig(adminId, kids[0].id) : null
+      setAdminData(data)
       const states = {}
       await Promise.all(kids.map(async kid => {
         const s = await getChildState(adminId, kid.id)
