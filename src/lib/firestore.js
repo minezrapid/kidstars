@@ -114,6 +114,23 @@ export async function resetChildState(adminId, childId) {
   await deleteDoc(doc(db, 'childState', `${adminId}_${childId}`))
 }
 
+// Delete a child completely (children doc + config + state)
+export async function deleteChild(adminId, childId) {
+  const promises = [
+    deleteDoc(doc(db, 'children', childId)).catch(() => {}),
+    deleteDoc(doc(db, 'childConfig', `${adminId}_${childId}`)).catch(() => {}),
+    deleteDoc(doc(db, 'childState', `${adminId}_${childId}`)).catch(() => {}),
+  ]
+  await Promise.all(promises)
+}
+
+// Get all invites for a specific child
+export async function getChildInvites(adminId, childId) {
+  const q = query(collection(db, 'invites'), where('adminId', '==', adminId), where('childId', '==', childId))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => ({ token: d.id, ...d.data() }))
+}
+
 // ── INVITES ───────────────────────────────────────────────────
 export async function createInvite(adminId, childId, { email, role, ageGroup, childName, gender }) {
   const token = crypto.randomUUID()

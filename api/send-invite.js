@@ -1,22 +1,20 @@
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Metodă nepermisă' })
 
   const { to, childName, link } = req.body || {}
   if (!to || !childName || !link) {
     return res.status(400).json({ error: 'Lipsesc câmpuri: to, childName, link' })
   }
 
-  const apiKey = process.env.RESEND_API_KEY
+  // Support both RESEND_API_KEY and VITE_RESEND_API_KEY (user may have set either)
+  const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY
   if (!apiKey) {
-    // Return success anyway - admin can copy link manually
-    console.warn('RESEND_API_KEY not set - email not sent')
-    return res.status(200).json({ ok: true, warning: 'Email not sent: RESEND_API_KEY missing' })
+    console.warn('No Resend API key found (tried RESEND_API_KEY and VITE_RESEND_API_KEY)')
+    return res.status(200).json({ ok: true, warning: 'no-key' })
   }
 
   try {
@@ -56,16 +54,14 @@ export default async function handler(req, res) {
       }),
     })
 
+    const data = await response.json().catch(() => ({}))
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      console.error('Resend error:', err)
-      return res.status(200).json({ ok: true, warning: 'Email failed: ' + (err.message || response.status) })
+      console.error('Resend API error:', data)
+      return res.status(200).json({ ok: true, warning: 'send-failed', detail: data.message || response.status })
     }
-
     return res.status(200).json({ ok: true })
   } catch (err) {
-    console.error('Send invite error:', err)
-    // Don't fail the whole invite flow if email fails
+    console.error('send-invite exception:', err)
     return res.status(200).json({ ok: true, warning: err.message })
   }
 }
