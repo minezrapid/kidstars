@@ -29,7 +29,15 @@ export function LoginPage() {
       else if (profile.role === 'child') navigate('/child')
       else navigate('/')
     } catch (err) {
-      setLoginError(err.code === 'auth/invalid-credential' ? 'Email sau parolă incorecte.' : 'A apărut o eroare.')
+      const msg = {
+        'auth/invalid-credential': 'Email sau parolă incorecte.',
+        'auth/user-not-found': 'Nu există un cont cu acest email.',
+        'auth/wrong-password': 'Parolă incorectă.',
+        'auth/too-many-requests': 'Prea multe încercări. Încearcă din nou mai târziu.',
+        'auth/user-disabled': 'Contul a fost dezactivat.',
+        'auth/network-request-failed': 'Eroare de rețea. Verifică conexiunea la internet.',
+      }
+      setLoginError(msg[err.code] || 'A apărut o eroare. Încearcă din nou.')
     } finally { setLoginLoading(false) }
   }
 
@@ -84,7 +92,7 @@ export function LoginPage() {
                 <label className="input-label">Email</label>
                 <input className={`input ${loginError ? 'error' : ''}`} type="email" autoFocus
                   value={loginForm.email} onChange={e => setLoginForm(f => ({...f, email: e.target.value}))}
-                  placeholder="parinte@email.com" required />
+                  placeholder="email@exemplu.com" required />
               </div>
               <div className="input-group">
                 <label className="input-label">Parolă</label>
@@ -120,7 +128,7 @@ export function LoginPage() {
                 <label className="input-label">Email</label>
                 <input className="input" type="email"
                   value={regForm.email} onChange={e => setRegForm(f => ({...f, email: e.target.value}))}
-                  placeholder="parinte@email.com" required />
+                  placeholder="email@exemplu.com" required />
               </div>
               <div className="input-group">
                 <label className="input-label">Parolă</label>

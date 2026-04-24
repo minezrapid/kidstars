@@ -24,7 +24,15 @@ export function AdminInvites() {
   const [form, setForm] = useState({ childId: '', childName: '', email: '', ageGroup: '7-10', gender: 'girl' })
   const BASE_URL = window.location.origin
 
-  useEffect(() => { load() }, [user.uid])
+  const [apiStatus, setApiStatus] = useState(null) // null=unknown, true=ok, false=no-key
+
+  useEffect(() => {
+    load()
+    // Check if email API is configured
+    fetch('/api/health').then(r => r.json()).then(d => {
+      setApiStatus(d.hasResendKey ? 'ok' : 'no-key')
+    }).catch(() => setApiStatus('error'))
+  }, [user.uid])
 
   async function load() {
     const [inv, kids] = await Promise.all([getAdminInvites(user.uid), getChildren(user.uid)])
@@ -114,6 +122,23 @@ export function AdminInvites() {
           <h1 style={{ fontSize: '1.75rem', color: 'var(--purple-800)' }}>Invitații</h1>
           <p style={{ marginTop: 4 }}>Invită copii sau creează link-uri de vizualizare.</p>
         </div>
+
+        {/* Email API status */}
+        {apiStatus === 'no-key' && (
+          <div style={{ background: '#FAEEDA', border: '1px solid #FAC775', borderRadius: 'var(--radius-md)', padding: '10px 16px', marginBottom: '1rem', fontSize: '0.875rem', color: '#633806' }}>
+            <strong>⚠️ Emailurile nu sunt configurate.</strong> Adaugă variabila <code>RESEND_API_KEY</code> în Vercel → Settings → Environment Variables pentru a trimite invitații pe email. Deocamdată poți copia link-ul manual.
+          </div>
+        )}
+        {apiStatus === 'ok' && (
+          <div style={{ background: 'var(--green-50)', border: '1px solid var(--green-600)', borderRadius: 'var(--radius-md)', padding: '10px 16px', marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--green-800)' }}>
+            ✅ Emailurile sunt configurate și funcționale.
+          </div>
+        )}
+        {apiStatus === 'error' && (
+          <div style={{ background: '#FCEBEB', border: '1px solid #EBA8C0', borderRadius: 'var(--radius-md)', padding: '10px 16px', marginBottom: '1rem', fontSize: '0.875rem', color: '#A32D2D' }}>
+            ❌ API-ul de emailuri nu răspunde. Verifică că deploy-ul Vercel e actualizat.
+          </div>
+        )}
 
         {/* Responsive grid - stacks on mobile */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>

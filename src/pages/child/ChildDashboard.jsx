@@ -47,7 +47,7 @@ export function ChildDashboard() {
       }
 
       if (!childId) {
-        setError('Nu am putut găsi profilul tău. Contactează părintele.')
+        setError('Profilul tău nu a fost găsit. Contactează părintele.')
         setLoading(false)
         return
       }
@@ -65,7 +65,7 @@ export function ChildDashboard() {
       ])
 
       if (!cfg) {
-        setError('Configurarea nu a fost găsită. Contactează părintele.')
+        setError('Configurarea nu a fost găsită. Cere părintelui să acceseze Setări și să salveze.')
         setLoading(false)
         return
       }
@@ -78,7 +78,7 @@ export function ChildDashboard() {
       // Store resolved childId for later saves
       setChildInfo(prev => ({ ...prev, resolvedChildId: childId }))
     } catch (err) {
-      setError('Eroare la încărcare: ' + err.message)
+      setError('Eroare la încărcare. Verifică conexiunea și încearcă din nou.')
     }
     setLoading(false)
   }, [adminId, user?.uid, profile])
@@ -113,7 +113,7 @@ export function ChildDashboard() {
     setSaving(true)
     const childId = childInfo?.resolvedChildId || childInfo?.id || profile?.childId || user.uid
     try { await saveChildState(adminId, childId, ns) }
-    catch { toast('Eroare la salvare.', 'error') }
+    catch { toast('Eroare la salvare. Încearcă din nou.', 'error') }
     finally { setSaving(false) }
   }
 

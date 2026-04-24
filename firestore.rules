@@ -1,44 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users: can read/write own profile; admin can read children's profiles
-    match /users/{userId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == userId ||
-        resource.data.adminId == request.auth.uid
-      );
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Children collection: admin can read/write; child can read own
-    match /children/{childId} {
-      allow read: if request.auth != null && (
-        resource.data.adminId == request.auth.uid ||
-        resource.data.userId == request.auth.uid
-      );
-      allow create, update: if request.auth != null;
-      allow delete: if request.auth != null;
-    }
-
-    // Child config: admin writes, child reads
-    match /childConfig/{configId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // Child state: admin and child can read/write
-    match /childState/{stateId} {
+    match /{document=**} {
       allow read, write: if request.auth != null;
     }
-
-    // Invites: anyone can read (needed for registration link); auth users can write
     match /invites/{token} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow write: if request.auth != null;
     }
   }
 }
