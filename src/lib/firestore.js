@@ -164,3 +164,12 @@ export async function createGuestLink(adminId) {
   })
   return token
 }
+
+// Admin settings (passwords, preferences)
+export async function getAdminSettings(adminId) {
+  const snap = await getDoc(doc(db, 'adminSettings', adminId))
+  return snap.exists() ? snap.data() : null
+}
+export async function saveAdminSettings(adminId, data) {
+  await setDoc(doc(db, 'adminSettings', adminId), data, { merge: true })
+}

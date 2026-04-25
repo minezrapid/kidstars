@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getChildConfig, saveChildConfig, getChildren } from '../../lib/firestore'
+import { getChildConfig, saveChildConfig, getChildren, getAdminSettings, saveAdminSettings } from '../../lib/firestore'
 import { DEMO_DATA } from '../../lib/demoData'
 import { AdminLayout } from './AdminLayout'
 import { Spinner } from '../../components/Spinner'
@@ -12,6 +12,7 @@ const TABS = [
   { key: 'penalties', label: '⚠️ Penalizări' },
   { key: 'rewards',   label: '🎁 Recompense' },
   { key: 'bonus',     label: '⚡ Bonusuri & Valori' },
+  { key: 'passwords', label: '🔐 Parole admin' },
 ]
 
 function getDefaultConfig(ageGroup) {
@@ -24,6 +25,8 @@ export function AdminSettings() {
   const toast = useToast()
   const [children, setChildren] = useState([])
   const [selectedChildId, setSelectedChildId] = useState(null)
+  const [adminPasswords, setAdminPasswords] = useState({ resetDay: '', resetYesterday: '' })
+  const [savingPwd, setSavingPwd] = useState(false)
   const [configs, setConfigs] = useState({}) // {childId: config}
   const [activeTab, setActiveTab] = useState('tasks1')
   const [loading, setLoading] = useState(true)
@@ -228,30 +231,36 @@ export function AdminSettings() {
           <div className="card">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {(config.rewards || []).map((r, i) => (
-                <div key={r.id || i} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 70px 100px 100px auto', gap: 8, alignItems: 'center' }}>
-                  <input style={{ padding: '6px 4px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '1.25rem', textAlign: 'center' }}
+                <div key={r.id || i} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--gray-100)' }}>
+                  <input style={{ width: 40, padding: '6px 4px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '1.25rem', textAlign: 'center', flexShrink: 0 }}
                     value={r.icon} onChange={e => updateReward(i, 'icon', e.target.value)} />
-                  <input className="input" style={{ fontSize: '0.875rem', padding: '7px 10px' }}
+                  <input className="input" style={{ fontSize: '0.875rem', padding: '7px 10px', minWidth: 160, flex: 1 }}
                     value={r.name} onChange={e => updateReward(i, 'name', e.target.value)} placeholder="Nume recompensă" />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                     <input type="number" value={r.pts} onChange={e => updateReward(i, 'pts', e.target.value)}
                       style={{ width: '100%', padding: '7px 6px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '0.875rem', textAlign: 'center' }} />
                     <span style={{ fontSize: '0.75rem', color: 'var(--gray-400)', flexShrink: 0 }}>⭐</span>
                   </div>
-                  <select value={r.dailyLimit || ''} onChange={e => updateReward(i, 'dailyLimit', e.target.value ? parseInt(e.target.value) : null)}
-                    style={{ padding: '7px 6px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '0.8125rem' }}>
-                    <option value="">Fără limită/zi</option>
-                    <option value="1">Max 1/zi</option>
-                    <option value="2">Max 2/zi</option>
-                    <option value="3">Max 3/zi</option>
-                  </select>
-                  <select value={r.weeklyLimit || ''} onChange={e => updateReward(i, 'weeklyLimit', e.target.value ? parseInt(e.target.value) : null)}
-                    style={{ padding: '7px 6px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '0.8125rem' }}>
-                    <option value="">Fără limită/săpt</option>
-                    <option value="1">Max 1/săpt</option>
-                    <option value="2">Max 2/săpt</option>
-                    <option value="3">Max 3/săpt</option>
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--gray-400)', fontWeight: 600 }}>Limită/zi</label>
+                    <select value={r.dailyLimit || ''} onChange={e => updateReward(i, 'dailyLimit', e.target.value ? parseInt(e.target.value) : null)}
+                      style={{ padding: '6px 8px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '0.8125rem', width: 110 }}>
+                      <option value="">Nelimitat</option>
+                      <option value="1">Max 1/zi</option>
+                      <option value="2">Max 2/zi</option>
+                      <option value="3">Max 3/zi</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--gray-400)', fontWeight: 600 }}>Limită/săpt</label>
+                    <select value={r.weeklyLimit || ''} onChange={e => updateReward(i, 'weeklyLimit', e.target.value ? parseInt(e.target.value) : null)}
+                      style={{ padding: '6px 8px', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: '0.8125rem', width: 110 }}>
+                      <option value="">Nelimitat</option>
+                      <option value="1">Max 1/săpt</option>
+                      <option value="2">Max 2/săpt</option>
+                      <option value="3">Max 3/săpt</option>
+                    </select>
+                  </div>
                   <button onClick={() => removeReward(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E24B4A', fontSize: 20, lineHeight: 1, padding: '0 4px' }}>×</button>
                 </div>
               ))}
@@ -261,6 +270,7 @@ export function AdminSettings() {
             </div>
           </div>
         )}
+        {/* Password tab rendered separately below */}
         {config && activeTab === 'bonus' && (
           <div className="card">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -303,14 +313,47 @@ export function AdminSettings() {
           </div>
         )}
 
+        {activeTab === 'passwords' && (
+          <div className="card">
+            <h3 style={{ marginBottom:'0.5rem' }}>🔐 Parole de protecție</h3>
+            <p style={{ fontSize:'0.875rem', color:'var(--gray-600)', marginBottom:'1.5rem', lineHeight:1.5 }}>
+              Aceste parole protejează acțiunile sensibile din panoul Copii.
+            </p>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+              <div style={{ background:'var(--green-50)', borderRadius:'var(--radius-md)', padding:'1rem' }}>
+                <div style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'var(--green-800)', marginBottom:8 }}>↺ Parola pentru "Resetare zi"</div>
+                <input className="input" type="password" value={adminPasswords.resetDay}
+                  onChange={e=>setAdminPasswords(p=>({...p,resetDay:e.target.value}))}
+                  placeholder="Introdu parola nouă..."/>
+              </div>
+              <div style={{ background:'var(--purple-50)', borderRadius:'var(--radius-md)', padding:'1rem' }}>
+                <div style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'var(--purple-800)', marginBottom:8 }}>← Parola pentru "Puncte pentru ieri"</div>
+                <input className="input" type="password" value={adminPasswords.resetYesterday}
+                  onChange={e=>setAdminPasswords(p=>({...p,resetYesterday:e.target.value}))}
+                  placeholder="Introdu parola nouă..."/>
+              </div>
+              <button className="btn btn-primary" disabled={savingPwd} onClick={async()=>{
+                setSavingPwd(true)
+                try {
+                  await saveAdminSettings(user.uid, { resetDayPassword: adminPasswords.resetDay, resetYesterdayPassword: adminPasswords.resetYesterday })
+                  toast('Parole salvate! ✅', 'success')
+                } catch(e) { toast('Eroare: '+e.message,'error') } finally { setSavingPwd(false) }
+              }}>
+                {savingPwd ? '...' : '💾 Salvează parolele'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           {children.length > 1 && (
             <button className="btn btn-ghost" onClick={handleSaveAll} disabled={saving}>
               {saving ? <Spinner size={16} /> : '💾 Salvează toți copiii'}
             </button>
           )}
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !selectedChildId}>
+          {activeTab !== 'passwords' && <button className="btn btn-primary" onClick={handleSave} disabled={saving || !selectedChildId}>
             {saving ? <Spinner size={16} color="white" /> : `💾 Salvează pentru ${selectedChild?.childName || ''}`}
+          </button>}
           </button>
         </div>
       </div>

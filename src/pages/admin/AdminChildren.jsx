@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   getChildren, getChildState, getChildConfig, saveChildState,
-  getChildDoc, deleteChild, getAdminInvites, cancelInvite, createInvite
+  getChildDoc, deleteChild, getAdminInvites, cancelInvite, createInvite,
+  getAdminSettings
 } from '../../lib/firestore'
 import { DEMO_DATA } from '../../lib/demoData'
 import { AdminLayout } from './AdminLayout'
@@ -15,7 +16,6 @@ function getYesterdayKey(){const d=new Date(Date.now()-86400000);return `${d.get
 function getMonthKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}`}
 function getWeekKey(){const d=new Date();const j=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-j)/86400000+j.getDay()+1)/7);return `${d.getFullYear()}-W${w}`}
 function fmtYesterday(){return new Date(Date.now()-86400000).toLocaleDateString('ro-RO',{weekday:'long',day:'numeric',month:'long'})}
-const RESET_PASSWORD = 'reseteaza'
 const BASE_URL = window.location.origin
 
 export function AdminChildren() {
@@ -170,6 +170,7 @@ function ChildDailyView({ adminId, childId, onBack }) {
   const [state, setState] = useState(null)
   const [childDoc, setChildDoc] = useState(null)
   const [invites, setInvites] = useState([])
+  const [adminSettings, setAdminSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -186,12 +187,14 @@ function ChildDailyView({ adminId, childId, onBack }) {
     setLoading(true)
     setError('')
     try {
-      const [cfg, st, cd, inv] = await Promise.all([
+      const [cfg, st, cd, inv, settings] = await Promise.all([
         getChildConfig(adminId, childId).catch(() => null),
         getChildState(adminId, childId).catch(() => null),
         getChildDoc(childId).catch(() => null),
         getAdminInvites(adminId).catch(() => []),
+        getAdminSettings(adminId).catch(() => null),
       ])
+      setAdminSettings(settings)
       setChildDoc(cd)
       setInvites(inv.filter(i => i.childId === childId || i.role === 'child'))
       setConfig(cfg || JSON.parse(JSON.stringify(DEMO_DATA[cd?.ageGroup || '7-10'])))
@@ -279,7 +282,8 @@ function ChildDailyView({ adminId, childId, onBack }) {
   }
 
   function tryReset() {
-    if(resetPwd!==RESET_PASSWORD){setResetPwdErr(true);return}
+    const correctPwd = adminSettings?.resetDayPassword || 'reseteaza'
+    if(resetPwd!==correctPwd){setResetPwdErr(true);return}
     setShowResetModal(false); setResetPwd(''); setResetPwdErr(false)
     const ns=initState()
     setState(ns)
@@ -294,41 +298,72 @@ function ChildDailyView({ adminId, childId, onBack }) {
   }
 
   async function sendLoginLink() {
+    const name = childDoc?.childName || 'Copil'
     if (!childDoc?.userId) {
-      // Child hasn't registered yet — send invite link instead
-      const email = prompt('Emailul copilului (pentru link de înregistrare):')
-      if (!email) return
+      // Not registered yet — show invite options
+      const email = prompt(`Email-ul lui ${name} pentru a trimite link-ul de înregistrare (lasă gol pentru a copia link-ul):`)
       setSendingLink(true)
       try {
-        const token = await createInvite(adminId, childId, {
-          email,
-          role: 'child',
-          ageGroup: childDoc?.ageGroup || '7-10',
-          childName: childDoc?.childName || 'Copil',
-          gender: childDoc?.gender || 'girl',
-        })
-        const link = `${BASE_URL}/register/child?token=${token}`
-        const res = await fetch('/api/send-invite', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ to: email, childName: childDoc?.childName || 'Copil', link }),
-        })
-        const data = await res.json().catch(()=>({}))
-        if (data.warning) {
-          // Copy to clipboard as fallback
-          navigator.clipboard.writeText(link)
-          toast('Email-ul nu s-a trimis. Link-ul a fost copiat în clipboard!', 'success')
+        // Find existing unused invite or create new one
+        const existing = invites.find(i => !i.used && i.role === 'child')
+        let inviteToken = existing?.token
+        if (!inviteToken) {
+          inviteToken = await createInvite(adminId, childId, {
+            email: email || '',
+            role: 'child',
+            ageGroup: childDoc?.ageGroup || '7-10',
+            childName: name,
+            gender: childDoc?.gender || 'girl',
+          })
+        }
+        const link = `${BASE_URL}/register/child?token=${inviteToken}`
+        if (email) {
+          const res = await fetch('/api/send-invite', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ to: email, childName: name, link }),
+          })
+          const data = await res.json().catch(()=>({}))
+          if (data.warning) {
+            navigator.clipboard.writeText(link)
+            toast('Email-ul nu s-a trimis. Link-ul a fost copiat! 📋', 'success')
+          } else {
+            toast('Link de înregistrare trimis pe email! 📧', 'success')
+          }
         } else {
-          toast('Link de înregistrare trimis pe email! 📧', 'success')
+          navigator.clipboard.writeText(link)
+          toast('Link de înregistrare copiat în clipboard! 📋', 'success')
         }
       } catch(e) {
         toast('Eroare: '+e.message, 'error')
       } finally { setSendingLink(false) }
     } else {
-      // Child is registered — copy login link
-      const link = `${BASE_URL}/login`
-      navigator.clipboard.writeText(link)
-      toast('Link de login copiat în clipboard! 📋', 'success')
+      // Child is registered — offer to send login link by email
+      const email = prompt(`Email-ul lui ${name} pentru a trimite link-ul de login (lasă gol pentru a copia link-ul):`)
+      const loginLink = `${BASE_URL}/login`
+      if (email) {
+        setSendingLink(true)
+        try {
+          const res = await fetch('/api/send-login-link', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ to: email, childName: name, loginUrl: loginLink }),
+          })
+          const data = await res.json().catch(()=>({}))
+          if (data.warning) {
+            navigator.clipboard.writeText(loginLink)
+            toast('Email-ul nu s-a trimis. Link-ul a fost copiat! 📋', 'success')
+          } else {
+            toast('Link de login trimis pe email! 📧', 'success')
+          }
+        } catch(e) {
+          navigator.clipboard.writeText(loginLink)
+          toast('Link de login copiat în clipboard! 📋', 'success')
+        } finally { setSendingLink(false) }
+      } else {
+        navigator.clipboard.writeText(loginLink)
+        toast('Link de login copiat în clipboard! 📋', 'success')
+      }
     }
   }
 
@@ -539,7 +574,7 @@ function ChildDailyView({ adminId, childId, onBack }) {
 
       {/* Yesterday Modal */}
       {showYesterdayModal && (
-        <YesterdayModal config={config} state={state}
+        <YesterdayModal config={config} state={state} adminSettings={adminSettings}
           onSave={ns=>{persist(ns);setShowYesterdayModal(false)}}
           onClose={()=>setShowYesterdayModal(false)}/>
       )}
@@ -557,7 +592,6 @@ function ChildDailyView({ adminId, childId, onBack }) {
               placeholder="Parolă de resetare..." autoFocus
               onKeyDown={e=>e.key==='Enter'&&tryReset()}/>
             {resetPwdErr && <p style={{ fontSize:'0.8125rem', color:'#E24B4A', marginTop:4 }}>Parolă incorectă.</p>}
-            <p style={{ fontSize:'0.75rem', color:'var(--gray-400)', marginTop:6 }}>Parola implicită: <code>reseteaza</code></p>
             <div style={{ display:'flex', gap:8, marginTop:12 }}>
               <button className="btn btn-ghost btn-sm" onClick={()=>{setShowResetModal(false);setResetPwd('');setResetPwdErr(false)}}>Anulează</button>
               <button className="btn btn-danger btn-sm" onClick={tryReset}>↺ Resetează ziua</button>
@@ -608,7 +642,7 @@ function TaskGroup({ label, color, emoji, tasks, done, count, bonus, bonusGiven,
   )
 }
 
-function YesterdayModal({ config, state, onSave, onClose }) {
+function YesterdayModal({ config, state, adminSettings, onSave, onClose }) {
   const [locked, setLocked] = useState({})
   const [newDone, setNewDone] = useState({})
   const [unlocked, setUnlocked] = useState(false)
@@ -616,7 +650,8 @@ function YesterdayModal({ config, state, onSave, onClose }) {
   const [pwdErr, setPwdErr] = useState(false)
 
   function unlock() {
-    if(pwd!==RESET_PASSWORD){setPwdErr(true);return}
+    const correctPwd = adminSettings?.resetYesterdayPassword || 'reseteaza'
+    if(pwd!==correctPwd){setPwdErr(true);return}
     const yKey=getYesterdayKey()
     const saved=state.dailyHistory?.[yKey]
     const savedDone=saved?Object.fromEntries(Object.entries(saved.done||{}).filter(([,v])=>v)):{}
