@@ -351,10 +351,11 @@ export function AdminSettings() {
               {saving ? <Spinner size={16} /> : '💾 Salvează toți copiii'}
             </button>
           )}
-          {activeTab !== 'passwords' && <button className="btn btn-primary" onClick={handleSave} disabled={saving || !selectedChildId}>
-            {saving ? <Spinner size={16} color="white" /> : `💾 Salvează pentru ${selectedChild?.childName || ''}`}
-          </button>}
-          </button>
+          {activeTab !== 'passwords' && (
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving || !selectedChildId}>
+              {saving ? <Spinner size={16} color="white" /> : `💾 Salvează pentru ${selectedChild?.childName || ''}`}
+            </button>
+          )}
         </div>
       </div>
     </AdminLayout>
